@@ -21,12 +21,19 @@ def init_db(db_path: str = DB_PATH) -> sqlite3.Connection:
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             name        TEXT NOT NULL,
             category    TEXT NOT NULL CHECK(category IN ('top', 'bottom', 'shoes')),
+            gender      TEXT NOT NULL DEFAULT 'Unisex',
             embedding   BLOB NOT NULL,
             thumbnail   BLOB,
             added_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
     """)
+    # Migrate existing databases that lack the gender column
+    try:
+        conn.execute("ALTER TABLE items ADD COLUMN gender TEXT NOT NULL DEFAULT 'Unisex'")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     conn.commit()
     return conn
 
@@ -49,12 +56,13 @@ def _make_thumbnail(image_path: str, size: tuple = (100, 100)) -> bytes:
 
 
 def add_item(conn: sqlite3.Connection, name: str, category: str,
-             embedding: np.ndarray, image_path: str = None) -> int:
+             embedding: np.ndarray, image_path: str = None,
+             gender: str = "Unisex") -> int:
     """Add a clothing item to the wardrobe. Returns the new item ID."""
     thumbnail = _make_thumbnail(image_path) if image_path else None
     cursor = conn.execute(
-        "INSERT INTO items (name, category, embedding, thumbnail) VALUES (?, ?, ?, ?)",
-        (name, category, _serialize_embedding(embedding), thumbnail)
+        "INSERT INTO items (name, category, gender, embedding, thumbnail) VALUES (?, ?, ?, ?, ?)",
+        (name, category, gender, _serialize_embedding(embedding), thumbnail)
     )
     conn.commit()
     return cursor.lastrowid
@@ -93,4 +101,6 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     """Convert a Row to a dict with deserialized embedding."""
     d = dict(row)
     d["embedding"] = _deserialize_embedding(d["embedding"])
+    if "gender" not in d:
+        d["gender"] = "Unisex"
     return d

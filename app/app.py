@@ -19,7 +19,7 @@ from src.embeddings import load_feature_extractor, extract_embedding, DEVICE
 from src.database import init_db, add_item, get_items, delete_item, count_items
 from src.compatibility import score_outfit
 from src.event_classifier import (
-    load_event_classifier, compute_outfit_event_score, EVENT_TO_USAGE, MODEL_PATH
+    load_event_classifier, compute_event_score, EVENT_TO_USAGE, MODEL_PATH, INPUT_DIM
 )
 from src.recommender import get_top_outfits
 
@@ -34,7 +34,7 @@ def get_extractor():
 @st.cache_resource
 def get_event_model():
     if Path(MODEL_PATH).exists():
-        return load_event_classifier(MODEL_PATH, device=DEVICE)
+        return load_event_classifier(MODEL_PATH, device=DEVICE, input_dim=INPUT_DIM)
     return None
 
 def get_db():
@@ -63,7 +63,7 @@ def score_bar(score, label="Score"):
 
 # ── SIDEBAR NAVIGATION ───────────────────────────────────────
 st.sidebar.title("👗 Smart Wardrobe")
-page = st.sidebar.radio("Navigate", ["Upload", "My Wardrobe", "Recommend", "About"])
+page = st.sidebar.radio("Navigate", ["Upload", "My Wardrobe", "Recommend"])
 
 conn = get_db()
 counts = count_items(conn)
@@ -78,9 +78,10 @@ if page == "Upload":
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
+        uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"], accept_multiple_files=False)
         name = st.text_input("Item name", placeholder="e.g. Blue Denim Jacket")
         category = st.selectbox("Category", ["top", "bottom", "shoes"])
+        gender = st.selectbox("Gender", ["Men", "Women", "Unisex"])
 
     with col2:
         if uploaded_file:
@@ -89,18 +90,17 @@ if page == "Upload":
 
     if st.button("Add to Wardrobe", type="primary", disabled=not uploaded_file or not name):
         with st.spinner("Extracting features..."):
-            # Save temp file for embedding extraction
             temp_path = Path("temp_upload.jpg")
             img = Image.open(uploaded_file).convert("RGB")
             img.save(temp_path)
 
             extractor = get_extractor()
             embedding = extract_embedding(extractor, str(temp_path))
-            item_id = add_item(conn, name, category, embedding, str(temp_path))
+            item_id = add_item(conn, name, category, embedding, str(temp_path), gender=gender)
 
             temp_path.unlink()  # cleanup
 
-        st.success(f"Added '{name}' to {category}s! (ID: {item_id})")
+        st.success(f"Added '{name}' ({gender}) to {category}s! (ID: {item_id})")
         st.cache_resource.clear()
         st.rerun()
 
@@ -121,6 +121,7 @@ elif page == "My Wardrobe":
             with cols[i % 5]:
                 show_thumbnail(item.get("thumbnail"), width=90)
                 st.caption(item["name"])
+                st.caption(f"_{item.get('gender', 'Unisex')}_")
                 if st.button("Delete", key=f"del_{item['id']}"):
                     delete_item(conn, item["id"])
                     st.cache_resource.clear()
@@ -135,10 +136,12 @@ elif page == "Recommend":
     if counts["top"] == 0 or counts["bottom"] == 0 or counts["shoes"] == 0:
         st.warning("You need at least 1 top, 1 bottom, and 1 pair of shoes to get recommendations. Upload some items first!")
     else:
-        col1, col2 = st.columns([1, 1])
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             event = st.selectbox("Event type", list(EVENT_TO_USAGE.keys()))
         with col2:
+            gender_filter = st.selectbox("Gender", ["All", "Men", "Women"])
+        with col3:
             top_n = st.slider("Number of outfits", 1, 10, 3)
 
         if st.button("Get Recommendations", type="primary"):
@@ -152,14 +155,12 @@ elif page == "Recommend":
                     event_model=event_model,
                     device=DEVICE,
                     top_n=top_n,
+                    gender_filter=gender_filter,
                 )
 
             if not results:
-                st.error("No outfit combinations found.")
+                st.error("No outfit combinations found. Try changing the gender filter — you may not have enough items tagged for that gender.")
             else:
-                if event_model is None:
-                    st.info("Event classifier not trained yet. Ranking by compatibility only. Run `python -m training.train_event_model` to enable event-aware scoring.")
-
                 for rank, outfit in enumerate(results, 1):
                     with st.container():
                         st.subheader(f"#{rank}")
@@ -182,38 +183,7 @@ elif page == "Recommend":
 
                         with cols[3]:
                             st.markdown("**Scores**")
+                            score_bar(outfit["scores"]["event_suitability"], "Confidence")
                             score_bar(outfit["scores"]["compatibility"], "Compatibility")
-                            if event_model:
-                                score_bar(outfit["scores"]["event_suitability"], f"Event ({event})")
-                            score_bar(outfit["scores"]["final"], "Overall")
 
                     st.markdown("---")
-
-# ── PAGE: ABOUT ───────────────────────────────────────────────
-elif page == "About":
-    st.title("About Smart Wardrobe")
-    st.markdown("""
-    **Smart Wardrobe** is a local ML-powered outfit recommender.
-
-    ### How it works
-    1. **Upload** clothing photos (tops, bottoms, shoes)
-    2. **ResNet50** extracts a 2048-dimensional embedding from each image
-    3. Embeddings are stored in a **SQLite** database
-    4. When you request recommendations:
-       - **Compatibility** is scored via cosine similarity between item embeddings
-       - **Event suitability** is predicted by an MLP trained on 44k fashion items
-       - Scores are combined to rank all outfit combinations
-       - **Top N outfits** are returned
-
-    ### Tech Stack
-    - **PyTorch** — ResNet50 embeddings + event classifier
-    - **SQLite** — wardrobe storage
-    - **Streamlit** — this UI
-    - **scikit-learn** — cosine similarity + evaluation metrics
-
-    ### Event Types
-    - Casual, Office, Wedding, Party, Date Night, Gym
-
-    ---
-    *Built with AI assistance from Claude (Anthropic).*
-    """)
