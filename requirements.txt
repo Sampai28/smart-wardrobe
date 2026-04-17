@@ -1,0 +1,8 @@
+torch==2.9.1
+torchvision==0.24.1
+pillow
+scikit-learn
+pandas
+streamlit
+matplotlib
+python-dotenv
