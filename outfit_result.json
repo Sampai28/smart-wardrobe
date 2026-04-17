@@ -1,0 +1,74 @@
+{
+  "event": "party",
+  "top": {
+    "category": "top",
+    "type": "button-up shirt",
+    "color": "light blue",
+    "secondary_colors": [
+      "white"
+    ],
+    "pattern": "striped",
+    "style": "business casual",
+    "suitable_events": [
+      "office",
+      "casual",
+      "date night"
+    ],
+    "material_guess": "cotton blend",
+    "fit": "regular",
+    "notes": "Men's long sleeve shirt with a single chest pocket and classic collar."
+  },
+  "bottom": {
+    "category": "bottom",
+    "type": "jeans",
+    "color": "blue",
+    "secondary_colors": [],
+    "pattern": "plain",
+    "style": "casual",
+    "suitable_events": [
+      "casual",
+      "date night"
+    ],
+    "material_guess": "denim",
+    "fit": "regular",
+    "notes": "Classic medium-wash blue jeans, suitable for everyday wear."
+  },
+  "shoes": {
+    "category": "shoes",
+    "type": "sneakers",
+    "color": "black",
+    "secondary_colors": [
+      "white",
+      "silver"
+    ],
+    "pattern": "plain",
+    "style": "casual",
+    "suitable_events": [
+      "casual"
+    ],
+    "material_guess": "leather",
+    "fit": "regular",
+    "notes": "Visibly worn and distressed, with torn collars and dirty white soles/toe caps, giving them a vintage or lived-in aesthetic. Features black laces and silver eyelets."
+  },
+  "recommendation": {
+    "compatibility_score": 0.3,
+    "verdict": "Poor Match",
+    "event_suitability": "Very low suitability for a party event. The outfit reads as overly casual and somewhat neglected, rather than celebratory or stylish.",
+    "what_works": [
+      "The basic color palette (light blue, blue, black) is neutral and doesn't clash aggressively.",
+      "A button-up shirt with jeans can form the base for a very casual party look, but needs significant elevation."
+    ],
+    "what_doesnt_work": [
+      "The visibly worn and distressed sneakers with torn collars and dirty soles are highly inappropriate for almost any party, giving an impression of sloppiness rather than intentional style.",
+      "The light blue striped business casual button-up shirt is too generic and lacks the festive flair or relaxed, stylish vibe typically desired for a party.",
+      "The overall combination is too distinctly 'everyday casual' and uninspired for a party event. It fails to elevate beyond basic daily wear.",
+      "No single item in this outfit contributes to making it suitable or exciting for a party."
+    ],
+    "styling_tips": [
+      "Always ensure all clothing items, especially shoes, are impeccably clean and well-maintained for any social event to project a polished image.",
+      "For a more relaxed party vibe with this shirt, consider rolling up the sleeves to just below the elbow and untucking it (if the fit allows for a neat, not baggy, untucked look).",
+      "If keeping the shirt and jeans, focus on making shoe and accessory choices that actively elevate the outfit rather than detracting from it."
+    ],
+    "alternative_suggestion": "Swap the visibly worn and distressed sneakers for a pair of clean, non-distressed casual shoes such as dark, clean sneakers (without visible wear), loafers, or desert boots. The current shoes are the most significant detriment to the outfit's suitability for a party."
+  }
+}
