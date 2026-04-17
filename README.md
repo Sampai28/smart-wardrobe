@@ -1,191 +1,137 @@
-# 👗 Digital Wardrobe — Outfit Recommender
+# Smart Wardrobe
 
-A machine learning system that learns your wardrobe and recommends the **top 3 outfit combinations** for any event — fully local, no external APIs.
-
----
-
-## 🧠 How It Works
-
-```
-Upload clothing photo (one at a time)
-        ↓
-ResNet50 extracts 2048-dim embedding
-(original image discarded)
-        ↓
-Embedding + metadata stored in SQLite
-        ↓
-User selects event type
-        ↓
-All wardrobe combinations scored by
-compatibility model
-        ↓
-Top 3 outfits returned
-```
+A locally deployed, privacy-preserving outfit recommendation system. Upload photos of your clothing, pick an event and gender filter, and get ranked outfit combinations from your own wardrobe — no cloud, no external APIs.
 
 ---
 
-## 📁 Project Structure
+## How It Works
 
-```
-digital-wardrobe/
-├── main.py                  # Embedding extraction + compatibility scoring
-├── wardrobe.db              # SQLite wardrobe store (auto-created)
-├── requirements.txt         # Python dependencies
-├── .env                     # Environment variables (if needed)
-├── .gitignore
-├── README.md                # This file
-├── sample_clothes/          # Test images
-│   ├── top.jpg
-│   ├── bottom.jpg
-│   └── shoes.jpg
-└── poc_result.json          # PoC output (auto-generated)
-```
+1. **Upload** clothing photos (tops, bottoms, shoes) with a name, category, and gender tag
+2. Each image is embedded using **ResNet50** (2048-dim) + **CLIP ViT-B/32** (512-dim) → 2560-dim hybrid vector
+3. Embeddings + a gender one-hot (3-dim) → **2563-dim input** to an MLP event classifier
+4. On the Recommend page, all top × bottom × shoes combinations are enumerated, gender-filtered, and scored
+5. Outfits are ranked by **event confidence** (how well each item suits the selected occasion)
 
 ---
 
-## ⚙️ Setup
+## Features
 
-### 1. Clone the repo
+- Hybrid ResNet50 + CLIP embeddings for richer visual + semantic features
+- Gender-aware recommendations (Men / Women / Unisex filter)
+- 6 event types: Casual, Office, Wedding, Party, Date Night, Gym
+- Automatic embedding migration — re-embeds stored items if the backbone changes, no re-upload needed
+- Fully local — no internet connection required at inference time
+- Privacy-preserving — original images discarded after embedding extraction
+
+---
+
+## Event Classifier
+
+Trained on **wardrobe_v2** — a balanced subset of 6,000 items (2,000 tops/bottoms/shoes) from the [Fashion Product Images dataset](https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-dataset).
+
+| Class | Support |
+|---|---|
+| Casual | 68.3% |
+| Sports | 16.2% |
+| Formal | 8.3% |
+| Ethnic | 7.1% |
+
+**Results (70/15/15 stratified split):**
+
+| Metric | Value |
+|---|---|
+| Test Accuracy | 88% |
+| Macro AUC-ROC | 0.9631 |
+| Weighted F1 | 0.88 |
+
+---
+
+## Setup
+
+### 1. Clone and create virtual environment
+
 ```bash
-git clone https://github.com/your-username/digital-wardrobe.git
-cd digital-wardrobe
-```
-
-### 2. Create a virtual environment
-```bash
+git clone https://github.com/your-username/smart-wardrobe.git
+cd smart-wardrobe
 python -m venv venv
 venv\Scripts\activate        # Windows
-source venv/bin/activate     # Mac/Linux
-```
-
-### 3. Install dependencies
-```bash
+# source venv/bin/activate   # Mac/Linux
 pip install -r requirements.txt
+pip install git+https://github.com/openai/CLIP.git
 ```
 
-### 4. Verify GPU (optional but recommended)
-```python
-import torch
-print("CUDA available:", torch.cuda.is_available())
-print("GPU:", torch.cuda.get_device_name(0))
+### 2. Prepare the dataset
+
+Place the `wardrobe_v2.zip` file in the `data/` folder:
+
+```
+data/
+  wardrobe_v2.zip
 ```
 
----
-
-## ▶️ Run
+### 3. Train the event classifier
 
 ```bash
-python main.py
+python -m training.train_event_model
 ```
 
-When prompted:
-```
-Path to TOP image    : sample_clothes/top.jpg
-Path to BOTTOM image : sample_clothes/bottom.jpg
-Path to SHOES image  : sample_clothes/shoes.jpg
+This will:
+- Extract `wardrobe_v2.zip` to `data/wardrobe_v2/`
+- Compute and cache embeddings to `data/embeddings_cache_resnet_clip.npz`
+- Train the MLP for up to 40 epochs with early stopping
+- Save the best model to `models/event_classifier.pth`
+- Save plots (training curves, confusion matrix, ROC curves) to `models/plots/`
 
-Available events: casual, office, wedding, party, date night, gym
-Event type: casual
+### 4. Run the app
+
+```bash
+streamlit run app/app.py
+```
+
+Open `http://localhost:8501` in your browser.
+
+---
+
+## Project Structure
+
+```
+app/
+  app.py                            Streamlit UI (Upload, My Wardrobe, Recommend)
+src/
+  embeddings.py                     ResNet50 + CLIP hybrid feature extraction
+  database.py                       SQLite wardrobe store + embedding migration gate
+  compatibility.py                  Cosine similarity compatibility scoring
+  event_classifier.py               MLP model, gender encoding, event-to-usage mapping
+  recommender.py                    Combination enumeration, gender filtering, ranking
+training/
+  train_event_model.py              Full training pipeline
+models/
+  event_classifier.pth              Trained MLP weights
+  training_metrics.json             Accuracy, AUC-ROC, classification report
+  plots/                            Training curves, confusion matrix, ROC curves
+data/
+  wardrobe_v2.zip                   Training dataset
+  embeddings_cache_resnet_clip.npz  Cached embeddings (auto-generated)
+report/
+  literature_survey.tex             IEEE conference paper
 ```
 
 ---
 
-## 📊 Sample Output
+## Tech Stack
 
-```
-👗  Digital Wardrobe — Embeddings PoC
-    ResNet50 + Cosine Similarity (No API)
-------------------------------------------------------
-⏳ Loading ResNet50 on CUDA...
-   ✅ ResNet50 ready
-
-⏳ Extracting embeddings...
-  [1/3] Top...
-  [2/3] Bottom...
-  [3/3] Shoes...
-  ✅ Done
-
-======================================================
-  📊  EMBEDDING EXTRACTION
-======================================================
-  Shape  : (2048,)  (2048-dim vector per item)
-  Device : CUDA
-
-======================================================
-  👔  COMPATIBILITY — EVENT: CASUAL
-======================================================
-  Score   : [████████░░] 80%
-  Verdict : Great Match 🟢
-
-  Pairwise Similarities:
-    Top    ↔ Bottom : 0.4821
-    Top    ↔ Shoes  : 0.3102
-    Bottom ↔ Shoes  : 0.3754
-    Average         : 0.3892
-======================================================
-💾 Results saved to poc_result.json
-```
-
----
-
-## 🛠️ Tech Stack
-
-| Tool | Purpose |
+| Component | Library |
 |---|---|
-| PyTorch 2.9.1 | Model training and embedding extraction |
-| torchvision | Pretrained ResNet50 feature extractor |
-| scikit-learn | Cosine similarity baseline + evaluation metrics |
-| SQLite | Persistent wardrobe store (embeddings + metadata) |
-| Pillow | Image loading and preprocessing |
-| Streamlit | Frontend UI (coming in v2) |
+| Visual embeddings | PyTorch, torchvision (ResNet50) |
+| Semantic embeddings | OpenAI CLIP (ViT-B/32) |
+| Event classifier | PyTorch MLP |
+| Wardrobe storage | SQLite |
+| UI | Streamlit |
+| Metrics | scikit-learn |
+| Data processing | NumPy, Pandas |
 
 ---
 
-## 🗺️ Roadmap
+## Acknowledgement
 
-- [x] ResNet50 embedding extraction (CUDA)
-- [x] Cosine similarity baseline scoring
-- [x] End-to-end PoC pipeline
-- [ ] SQLite wardrobe store (append embeddings as items are added)
-- [ ] Train compatibility model on Polyvore dataset
-- [ ] Top 3 outfit ranking from full wardrobe
-- [ ] Streamlit UI — upload, manage wardrobe, view recommendations
-- [ ] Final evaluation — Accuracy, F1, AUC-ROC
-
----
-
-## 📦 Requirements
-
-```
-torch==2.9.1
-torchvision==0.24.1
-pillow
-scikit-learn
-python-dotenv
-```
-
-Install with:
-```bash
-pip install torch==2.9.1 torchvision==0.24.1 --index-url https://download.pytorch.org/whl/cu128
-pip install pillow scikit-learn python-dotenv
-```
-
----
-
-## ⚠️ Current Limitations (PoC Stage)
-
-- Compatibility scoring uses cosine similarity — a placeholder until the model is trained on Polyvore
-- No persistent wardrobe storage yet — each run is independent
-- Works best with well-lit, single-item photos against a plain background
-
----
-
-## 🤖 AI Acknowledgement
-
-This project was designed iteratively with the assistance of Claude (Anthropic) for idea refinement, code structure, and documentation. The original concept involved using Gemini Flash Lite for embedding extraction — through iterative refinement, the project evolved into a fully local ML pipeline using ResNet50. All AI assistance is explicitly acknowledged here and in the project report.
-
----
-
-## 📄 License
-
-MIT
+Built with assistance from [Claude](https://claude.ai) (Anthropic) for system architecture, code implementation, and documentation.
