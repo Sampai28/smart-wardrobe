@@ -15,8 +15,8 @@ import numpy as np
 import io
 from PIL import Image
 
-from src.embeddings import load_feature_extractor, extract_embedding, DEVICE
-from src.database import init_db, add_item, get_items, delete_item, count_items
+from src.embeddings import load_feature_extractor, extract_embedding, DEVICE, EMBEDDING_DIM
+from src.database import init_db, add_item, get_items, delete_item, count_items, remigrate_embeddings
 from src.compatibility import score_outfit
 from src.event_classifier import (
     load_event_classifier, compute_event_score, EVENT_TO_USAGE, MODEL_PATH, INPUT_DIM
@@ -66,6 +66,11 @@ st.sidebar.title("👗 Smart Wardrobe")
 page = st.sidebar.radio("Navigate", ["Upload", "My Wardrobe", "Recommend"])
 
 conn = get_db()
+
+# Auto-migrate any items with mismatched embedding dimensions
+_extractor = get_extractor()
+remigrate_embeddings(conn, _extractor, required_dim=EMBEDDING_DIM)
+
 counts = count_items(conn)
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"**Wardrobe:** {counts['top']} tops | {counts['bottom']} bottoms | {counts['shoes']} shoes")

@@ -40,7 +40,7 @@ from src.event_classifier import EventClassifierNet, USAGE_CLASSES, INPUT_DIM, e
 DATA_DIR = Path("data")
 ZIP_PATH = DATA_DIR / "wardrobe_v2.zip"
 EXTRACT_DIR = DATA_DIR / "wardrobe_v2"
-EMBEDDINGS_CACHE = DATA_DIR / "embeddings_cache_v2.npz"
+EMBEDDINGS_CACHE = DATA_DIR / "embeddings_cache_resnet_clip.npz"
 MODEL_SAVE_PATH = Path("models/event_classifier.pth")
 METRICS_SAVE_PATH = Path("models/training_metrics.json")
 
@@ -144,7 +144,7 @@ def get_embeddings(df: pd.DataFrame) -> np.ndarray:
         else:
             print("  Cache mismatch — recomputing...")
 
-    print(f"Extracting ResNet50 embeddings for {len(df)} images on {DEVICE}...")
+    print(f"Extracting CLIP embeddings for {len(df)} images on {DEVICE}...")
     extractor = load_feature_extractor()
     image_paths = df["image_path"].tolist()
     embeddings = extract_embeddings_batch(extractor, image_paths, batch_size=64)
