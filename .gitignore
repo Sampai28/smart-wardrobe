@@ -2,8 +2,18 @@
 __pycache__/
 *.pyc
 .DS_Store
-sample_clothes/
-*.json
 venv/
-*.jpg
-*.png
+.claude/
+
+# Data (too large for git)
+data/
+models/
+*.npz
+
+# Temp files
+wardrobe.db
+temp_upload.jpg
+test_data/
+
+#report
+report/

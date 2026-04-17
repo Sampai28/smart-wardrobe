@@ -1,0 +1,14 @@
+{
+  "event": "office",
+  "scores": {
+    "top_bottom_sim": 0.3098,
+    "top_shoes_sim": 0.1463,
+    "bottom_shoes_sim": 0.2452,
+    "avg_similarity": 0.2338,
+    "compatibility": 0.5552,
+    "verdict": "Decent Match \ud83d\udfe1"
+  },
+  "embedding_shape": [
+    2048
+  ]
+}
