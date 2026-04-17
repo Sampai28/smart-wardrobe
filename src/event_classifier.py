@@ -28,7 +28,7 @@ EVENT_TO_USAGE = {
 }
 
 MODEL_PATH = "models/event_classifier.pth"
-INPUT_DIM = 2051  # 2048 embedding + 3 gender one-hot
+INPUT_DIM = 2563  # 2048 ResNet50 + 512 CLIP + 3 gender one-hot
 
 
 def encode_gender(gender: str) -> np.ndarray:

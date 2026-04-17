@@ -90,6 +90,44 @@ def delete_item(conn: sqlite3.Connection, item_id: int) -> bool:
     return cursor.rowcount > 0
 
 
+def remigrate_embeddings(conn: sqlite3.Connection, extractor, required_dim: int) -> int:
+    """
+    Re-embed any items whose embedding dimension doesn't match required_dim.
+    Uses the stored thumbnail to re-extract embeddings.
+    Returns the number of items re-embedded.
+    """
+    import tempfile
+    from src.embeddings import extract_embedding
+
+    rows = conn.execute("SELECT id, name, thumbnail, length(embedding) FROM items").fetchall()
+    stale = [(r[0], r[1], r[2]) for r in rows if r[3] // 4 != required_dim]
+
+    if not stale:
+        return 0
+
+    print(f"[DB migration] Re-embedding {len(stale)} items (dim mismatch → expected {required_dim})")
+
+    for item_id, name, thumbnail in stale:
+        if not thumbnail:
+            print(f"  Skipping '{name}' (no thumbnail stored)")
+            continue
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
+            f.write(thumbnail)
+            tmp_path = f.name
+        try:
+            new_embedding = extract_embedding(extractor, tmp_path)
+            conn.execute(
+                "UPDATE items SET embedding = ? WHERE id = ?",
+                (_serialize_embedding(new_embedding), item_id)
+            )
+            print(f"  Re-embedded '{name}' → {len(new_embedding)}-dim")
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    conn.commit()
+    return len(stale)
+
+
 def count_items(conn: sqlite3.Connection) -> dict:
     """Count items by category."""
     rows = conn.execute("SELECT category, COUNT(*) as cnt FROM items GROUP BY category").fetchall()
