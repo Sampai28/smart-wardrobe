@@ -1,0 +1,164 @@
+{
+  "n_splits": 5,
+  "folds": [
+    {
+      "fold": 1,
+      "val_accuracy": 0.8857,
+      "auc_roc_macro": 0.9748,
+      "per_class": {
+        "Casual": {
+          "precision": 0.9548,
+          "recall": 0.8767,
+          "f1": 0.9141,
+          "support": 819
+        },
+        "Ethnic": {
+          "precision": 0.8602,
+          "recall": 0.9302,
+          "f1": 0.8939,
+          "support": 86
+        },
+        "Formal": {
+          "precision": 0.7419,
+          "recall": 0.9293,
+          "f1": 0.8251,
+          "support": 99
+        },
+        "Sports": {
+          "precision": 0.7478,
+          "recall": 0.8821,
+          "f1": 0.8094,
+          "support": 195
+        }
+      }
+    },
+    {
+      "fold": 2,
+      "val_accuracy": 0.8832,
+      "auc_roc_macro": 0.9663,
+      "per_class": {
+        "Casual": {
+          "precision": 0.9336,
+          "recall": 0.8926,
+          "f1": 0.9126,
+          "support": 819
+        },
+        "Ethnic": {
+          "precision": 0.8824,
+          "recall": 0.8824,
+          "f1": 0.8824,
+          "support": 85
+        },
+        "Formal": {
+          "precision": 0.8131,
+          "recall": 0.87,
+          "f1": 0.8406,
+          "support": 100
+        },
+        "Sports": {
+          "precision": 0.7411,
+          "recall": 0.8513,
+          "f1": 0.7924,
+          "support": 195
+        }
+      }
+    },
+    {
+      "fold": 3,
+      "val_accuracy": 0.8824,
+      "auc_roc_macro": 0.9658,
+      "per_class": {
+        "Casual": {
+          "precision": 0.9325,
+          "recall": 0.8938,
+          "f1": 0.9127,
+          "support": 819
+        },
+        "Ethnic": {
+          "precision": 0.8795,
+          "recall": 0.8588,
+          "f1": 0.869,
+          "support": 85
+        },
+        "Formal": {
+          "precision": 0.7759,
+          "recall": 0.9,
+          "f1": 0.8333,
+          "support": 100
+        },
+        "Sports": {
+          "precision": 0.7581,
+          "recall": 0.8359,
+          "f1": 0.7951,
+          "support": 195
+        }
+      }
+    },
+    {
+      "fold": 4,
+      "val_accuracy": 0.8849,
+      "auc_roc_macro": 0.9689,
+      "per_class": {
+        "Casual": {
+          "precision": 0.9441,
+          "recall": 0.8864,
+          "f1": 0.9144,
+          "support": 819
+        },
+        "Ethnic": {
+          "precision": 0.8557,
+          "recall": 0.9765,
+          "f1": 0.9121,
+          "support": 85
+        },
+        "Formal": {
+          "precision": 0.8087,
+          "recall": 0.93,
+          "f1": 0.8651,
+          "support": 100
+        },
+        "Sports": {
+          "precision": 0.7294,
+          "recall": 0.8154,
+          "f1": 0.77,
+          "support": 195
+        }
+      }
+    },
+    {
+      "fold": 5,
+      "val_accuracy": 0.8831,
+      "auc_roc_macro": 0.9688,
+      "per_class": {
+        "Casual": {
+          "precision": 0.9282,
+          "recall": 0.8999,
+          "f1": 0.9138,
+          "support": 819
+        },
+        "Ethnic": {
+          "precision": 0.8316,
+          "recall": 0.9186,
+          "f1": 0.8729,
+          "support": 86
+        },
+        "Formal": {
+          "precision": 0.7692,
+          "recall": 0.9091,
+          "f1": 0.8333,
+          "support": 99
+        },
+        "Sports": {
+          "precision": 0.7917,
+          "recall": 0.7835,
+          "f1": 0.7876,
+          "support": 194
+        }
+      }
+    }
+  ],
+  "mean_accuracy": 0.8839,
+  "std_accuracy": 0.0012,
+  "mean_auc_roc": 0.9689,
+  "std_auc_roc": 0.0032
+}
