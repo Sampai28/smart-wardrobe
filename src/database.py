@@ -1,5 +1,5 @@
 """
-SQLite wardrobe store — stores clothing items with embeddings and metadata.
+SQLite wardrobe store - clothing items with embeddings and metadata.
 """
 
 import sqlite3
@@ -28,12 +28,11 @@ def init_db(db_path: str = DB_PATH) -> sqlite3.Connection:
         );
         CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
     """)
-    # Migrate existing databases that lack the gender column
     try:
         conn.execute("ALTER TABLE items ADD COLUMN gender TEXT NOT NULL DEFAULT 'Unisex'")
         conn.commit()
     except sqlite3.OperationalError:
-        pass  # Column already exists
+        pass
     conn.commit()
     return conn
 
@@ -91,11 +90,7 @@ def delete_item(conn: sqlite3.Connection, item_id: int) -> bool:
 
 
 def remigrate_embeddings(conn: sqlite3.Connection, extractor, required_dim: int) -> int:
-    """
-    Re-embed any items whose embedding dimension doesn't match required_dim.
-    Uses the stored thumbnail to re-extract embeddings.
-    Returns the number of items re-embedded.
-    """
+    """Re-embed any items whose stored embedding dimension does not match required_dim."""
     import tempfile
     from src.embeddings import extract_embedding
 
@@ -105,11 +100,8 @@ def remigrate_embeddings(conn: sqlite3.Connection, extractor, required_dim: int)
     if not stale:
         return 0
 
-    print(f"[DB migration] Re-embedding {len(stale)} items (dim mismatch → expected {required_dim})")
-
     for item_id, name, thumbnail in stale:
         if not thumbnail:
-            print(f"  Skipping '{name}' (no thumbnail stored)")
             continue
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
             f.write(thumbnail)
@@ -120,7 +112,6 @@ def remigrate_embeddings(conn: sqlite3.Connection, extractor, required_dim: int)
                 "UPDATE items SET embedding = ? WHERE id = ?",
                 (_serialize_embedding(new_embedding), item_id)
             )
-            print(f"  Re-embedded '{name}' → {len(new_embedding)}-dim")
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 

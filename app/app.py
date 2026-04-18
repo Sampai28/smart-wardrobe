@@ -1,13 +1,11 @@
 """
-Smart Wardrobe — Streamlit UI
-
+Smart Wardrobe - Streamlit UI
 Run with: streamlit run app/app.py
 """
 
 import sys
 from pathlib import Path
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
@@ -23,10 +21,8 @@ from src.event_classifier import (
 )
 from src.recommender import get_top_outfits
 
-# ── PAGE CONFIG ───────────────────────────────────────────────
-st.set_page_config(page_title="Smart Wardrobe", page_icon="👗", layout="wide")
+st.set_page_config(page_title="Smart Wardrobe", layout="wide")
 
-# ── CACHED RESOURCES ──────────────────────────────────────────
 @st.cache_resource
 def get_extractor():
     return load_feature_extractor()
@@ -38,12 +34,9 @@ def get_event_model():
     return None
 
 def get_db():
-    """Fresh connection each call — SQLite is lightweight and avoids threading issues."""
     return init_db("wardrobe.db")
 
-# ── HELPERS ───────────────────────────────────────────────────
 def show_thumbnail(thumbnail_bytes, width=100):
-    """Display a thumbnail from bytes."""
     if thumbnail_bytes:
         img = Image.open(io.BytesIO(thumbnail_bytes))
         st.image(img, width=width)
@@ -51,23 +44,20 @@ def show_thumbnail(thumbnail_bytes, width=100):
         st.write("No image")
 
 def score_bar(score, label="Score"):
-    """Display a colored score bar."""
     if score >= 0.75:
-        color = "🟢"
+        color = "green"
     elif score >= 0.55:
-        color = "🟡"
+        color = "orange"
     else:
-        color = "🔴"
-    st.markdown(f"**{label}:** {score:.0%} {color}")
+        color = "red"
+    st.markdown(f"**{label}:** :{color}[{score:.0%}]")
     st.progress(min(score, 1.0))
 
-# ── SIDEBAR NAVIGATION ───────────────────────────────────────
-st.sidebar.title("👗 Smart Wardrobe")
+st.sidebar.title("Smart Wardrobe")
 page = st.sidebar.radio("Navigate", ["Upload", "My Wardrobe", "Recommend"])
 
 conn = get_db()
 
-# Auto-migrate any items with mismatched embedding dimensions
 _extractor = get_extractor()
 remigrate_embeddings(conn, _extractor, required_dim=EMBEDDING_DIM)
 
@@ -75,7 +65,6 @@ counts = count_items(conn)
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"**Wardrobe:** {counts['top']} tops | {counts['bottom']} bottoms | {counts['shoes']} shoes")
 
-# ── PAGE: UPLOAD ──────────────────────────────────────────────
 if page == "Upload":
     st.title("Upload Clothing Item")
     st.write("Add a new item to your wardrobe by uploading a photo.")
@@ -103,13 +92,12 @@ if page == "Upload":
             embedding = extract_embedding(extractor, str(temp_path))
             item_id = add_item(conn, name, category, embedding, str(temp_path), gender=gender)
 
-            temp_path.unlink()  # cleanup
+            temp_path.unlink()
 
         st.success(f"Added '{name}' ({gender}) to {category}s! (ID: {item_id})")
         st.cache_resource.clear()
         st.rerun()
 
-# ── PAGE: MY WARDROBE ────────────────────────────────────────
 elif page == "My Wardrobe":
     st.title("My Wardrobe")
 
@@ -133,13 +121,12 @@ elif page == "My Wardrobe":
                     st.rerun()
         st.markdown("---")
 
-# ── PAGE: RECOMMEND ───────────────────────────────────────────
 elif page == "Recommend":
     st.title("Outfit Recommendations")
 
     counts = count_items(conn)
     if counts["top"] == 0 or counts["bottom"] == 0 or counts["shoes"] == 0:
-        st.warning("You need at least 1 top, 1 bottom, and 1 pair of shoes to get recommendations. Upload some items first!")
+        st.warning("You need at least 1 top, 1 bottom, and 1 pair of shoes to get recommendations.")
     else:
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
@@ -164,7 +151,7 @@ elif page == "Recommend":
                 )
 
             if not results:
-                st.error("No outfit combinations found. Try changing the gender filter — you may not have enough items tagged for that gender.")
+                st.error("No outfit combinations found. Try changing the gender filter.")
             else:
                 for rank, outfit in enumerate(results, 1):
                     with st.container():
