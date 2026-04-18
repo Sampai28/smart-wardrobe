@@ -95,7 +95,6 @@ if page == "Upload":
             temp_path.unlink()
 
         st.success(f"Added '{name}' ({gender}) to {category}s! (ID: {item_id})")
-        st.cache_resource.clear()
         st.rerun()
 
 elif page == "My Wardrobe":
@@ -117,7 +116,6 @@ elif page == "My Wardrobe":
                 st.caption(f"_{item.get('gender', 'Unisex')}_")
                 if st.button("Delete", key=f"del_{item['id']}"):
                     delete_item(conn, item["id"])
-                    st.cache_resource.clear()
                     st.rerun()
         st.markdown("---")
 
