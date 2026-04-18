@@ -3,14 +3,6 @@ Train the event classifier on the wardrobe_v2 dataset.
 
 Usage:
     python -m training.train_event_model
-
-Pipeline:
-    1. Load metadata.csv from data/wardrobe_v2.zip, filter to valid usage + images
-    2. Merge tiny classes: Smart Casual→Formal, Party→Casual
-    3. Pre-compute ResNet50 embeddings (cached to disk)
-    4. Build 2051-dim features: embedding (2048) + gender one-hot (3)
-    5. Train MLP classifier: 2051 -> 512 -> 128 -> 4 usage classes
-    6. Save best checkpoint to models/event_classifier.pth
 """
 
 import os
@@ -30,13 +22,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.embeddings import load_feature_extractor, extract_embeddings_batch, DEVICE
 from src.event_classifier import EventClassifierNet, USAGE_CLASSES, INPUT_DIM, encode_gender, build_features
 
-# ── CONFIG ────────────────────────────────────────────────────
 DATA_DIR = Path("data")
 ZIP_PATH = DATA_DIR / "wardrobe_v2.zip"
 EXTRACT_DIR = DATA_DIR / "wardrobe_v2"
@@ -47,9 +37,8 @@ METRICS_SAVE_PATH = Path("models/training_metrics.json")
 BATCH_SIZE = 64
 EPOCHS = 40
 LEARNING_RATE = 1e-3
-PATIENCE = 7  # early stopping
+PATIENCE = 7
 
-# Class merging: tiny/noisy classes → larger ones
 CLASS_MERGE = {
     "Smart Casual": "Formal",
     "Party":        "Casual",
@@ -58,7 +47,6 @@ CLASS_MERGE = {
 }
 
 
-# ── DATASET ───────────────────────────────────────────────────
 class EmbeddingDataset(Dataset):
     def __init__(self, features: np.ndarray, labels: np.ndarray):
         self.features = torch.tensor(features, dtype=torch.float32)
@@ -71,9 +59,7 @@ class EmbeddingDataset(Dataset):
         return self.features[idx], self.labels[idx]
 
 
-# ── STEP 1: EXTRACT ZIP ───────────────────────────────────────
 def ensure_extracted() -> Path:
-    """Extract wardrobe_v2.zip to data/wardrobe_v2/ if not already done."""
     if EXTRACT_DIR.exists() and (EXTRACT_DIR / "metadata.csv").exists():
         print(f"Dataset already extracted at {EXTRACT_DIR}")
         return EXTRACT_DIR
@@ -85,21 +71,14 @@ def ensure_extracted() -> Path:
     return EXTRACT_DIR
 
 
-# ── STEP 2: LOAD & FILTER DATA ────────────────────────────────
 def load_data(extract_dir: Path) -> pd.DataFrame:
     print("Loading metadata.csv...")
     df = pd.read_csv(extract_dir / "metadata.csv")
 
-    # Apply class merging
     df["usage"] = df["usage"].map(lambda u: CLASS_MERGE.get(u, u))
-
-    # Drop rows with null usage or gender
     df = df.dropna(subset=["usage", "gender"]).copy()
-
-    # Keep only valid USAGE_CLASSES
     df = df[df["usage"].isin(USAGE_CLASSES)].copy()
 
-    # Build image paths and check existence
     def find_image(row):
         for subdir in ["tops", "bottoms", "shoes"]:
             p = extract_dir / subdir / row["file_name"]
@@ -110,23 +89,17 @@ def load_data(extract_dir: Path) -> pd.DataFrame:
     df["image_path"] = df.apply(find_image, axis=1)
     df = df[df["image_path"].notna()].copy()
 
-    # Encode labels
     label_map = {cls: i for i, cls in enumerate(USAGE_CLASSES)}
     df["label"] = df["usage"].map(label_map)
 
     print(f"  Valid items: {len(df)}")
-    print(f"  Class distribution:")
     for cls in USAGE_CLASSES:
         count = len(df[df["usage"] == cls])
-        pct = count / len(df) * 100
-        print(f"    {cls:15s}: {count:4d}  ({pct:.1f}%)")
-    print(f"  Gender distribution:")
-    print(df["gender"].value_counts().to_string())
+        print(f"    {cls}: {count} ({count / len(df) * 100:.1f}%)")
 
     return df
 
 
-# ── STEP 3: PRE-COMPUTE EMBEDDINGS ───────────────────────────
 def get_embeddings(df: pd.DataFrame) -> np.ndarray:
     if EMBEDDINGS_CACHE.exists():
         print(f"Loading cached embeddings from {EMBEDDINGS_CACHE}...")
@@ -142,7 +115,7 @@ def get_embeddings(df: pd.DataFrame) -> np.ndarray:
             print(f"  Cache hit: {len(indices)} embeddings")
             return cached_embs[indices]
         else:
-            print("  Cache mismatch — recomputing...")
+            print("  Cache mismatch, recomputing...")
 
     print(f"Extracting CLIP embeddings for {len(df)} images on {DEVICE}...")
     extractor = load_feature_extractor()
@@ -154,27 +127,23 @@ def get_embeddings(df: pd.DataFrame) -> np.ndarray:
     return embeddings
 
 
-# ── STEP 4: TRAIN ─────────────────────────────────────────────
 def train():
     extract_dir = ensure_extracted()
     df = load_data(extract_dir)
     embeddings = get_embeddings(df)
 
-    # Build 2051-dim features: embedding + gender one-hot
     genders = df["gender"].tolist()
     features = build_features(embeddings, genders)
     labels = df["label"].values
 
-    # 70/15/15 train/val/test split (stratified)
     X_temp, X_test, y_temp, y_test = train_test_split(
         features, labels, test_size=0.15, random_state=42, stratify=labels
     )
     X_train, X_val, y_train, y_val = train_test_split(
         X_temp, y_temp, test_size=0.15/0.85, random_state=42, stratify=y_temp
     )
-    print(f"\nTrain: {len(X_train)} | Val: {len(X_val)} | Test: {len(X_test)}")
+    print(f"Train: {len(X_train)}  Val: {len(X_val)}  Test: {len(X_test)}")
 
-    # Weighted sampler to handle class imbalance
     num_classes = len(USAGE_CLASSES)
     class_counts = np.bincount(y_train, minlength=num_classes)
     class_weights = 1.0 / (class_counts + 1e-6)
@@ -187,7 +156,6 @@ def train():
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, sampler=sampler)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-    # Model
     device = DEVICE
     model = EventClassifierNet(input_dim=INPUT_DIM, num_classes=num_classes).to(device)
     criterion = nn.CrossEntropyLoss(
@@ -200,12 +168,10 @@ def train():
     patience_counter = 0
     history = {"train_loss": [], "val_loss": [], "val_acc": []}
 
-    print(f"\nTraining on {device.upper() if isinstance(device, str) else str(device).upper()}...")
+    print(f"Training on {device.upper() if isinstance(device, str) else str(device).upper()}...")
     print(f"{'Epoch':>6} {'Train Loss':>12} {'Val Loss':>12} {'Val Acc':>10}")
-    print("-" * 44)
 
     for epoch in range(EPOCHS):
-        # Train
         model.train()
         train_loss = 0.0
         for feats, lbls in train_loader:
@@ -217,7 +183,6 @@ def train():
             train_loss += loss.item() * len(feats)
         train_loss /= len(train_dataset)
 
-        # Validate
         model.eval()
         val_loss = 0.0
         val_preds, val_true = [], []
@@ -253,10 +218,9 @@ def train():
             print(f"\nEarly stopping at epoch {epoch+1}")
             break
 
-    print(f"\nBest validation accuracy: {best_val_acc:.2%}")
+    print(f"Best validation accuracy: {best_val_acc:.2%}")
     print(f"Model saved to {MODEL_SAVE_PATH}")
 
-    # ── FINAL EVALUATION ──────────────────────────────────────
     model.load_state_dict(torch.load(MODEL_SAVE_PATH, weights_only=True))
     model.eval()
 
@@ -294,11 +258,9 @@ def train():
     auc_macro = roc_auc_score(y_test_bin, test_probs, average="macro", multi_class="ovr")
     print(f"Test AUC-ROC (macro OvR): {auc_macro:.4f}")
 
-    # ── VISUALIZATIONS ────────────────────────────────────────
     plots_dir = MODEL_SAVE_PATH.parent / "plots"
     plots_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Training curves
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     epochs_range = range(1, len(history["train_loss"]) + 1)
     axes[0].plot(epochs_range, history["train_loss"], label="Train Loss")
@@ -313,7 +275,6 @@ def train():
     plt.savefig(plots_dir / "training_curves.png", dpi=150)
     plt.close()
 
-    # 2. Confusion matrix (test set)
     cm = confusion_matrix(test_true, test_preds, labels=list(range(num_cls)))
     fig, ax = plt.subplots(figsize=(6, 5))
     im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
@@ -331,7 +292,6 @@ def train():
     plt.savefig(plots_dir / "confusion_matrix.png", dpi=150)
     plt.close()
 
-    # 3. ROC curves (one-vs-rest, test set)
     from sklearn.metrics import roc_curve, auc
     fig, ax = plt.subplots(figsize=(7, 5))
     colors = ["steelblue", "darkorange", "green", "red"]
@@ -341,7 +301,7 @@ def train():
         ax.plot(fpr, tpr, color=color, lw=2, label=f"{cls_name} (AUC={roc_auc:.2f})")
     ax.plot([0, 1], [0, 1], "k--", lw=1)
     ax.set_xlabel("False Positive Rate"); ax.set_ylabel("True Positive Rate")
-    ax.set_title("ROC Curves — One-vs-Rest (Test Set)")
+    ax.set_title("ROC Curves - One-vs-Rest (Test Set)")
     ax.legend(loc="lower right")
     plt.tight_layout()
     plt.savefig(plots_dir / "roc_curves.png", dpi=150)
