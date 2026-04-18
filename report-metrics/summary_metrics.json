@@ -1,0 +1,52 @@
+{
+  "test_accuracy": 0.8833,
+  "best_val_accuracy": 0.8954,
+  "test_auc_roc_macro": 0.9649,
+  "epochs_trained": 29,
+  "dataset_split": {
+    "train": 4195,
+    "val": 899,
+    "test": 900,
+    "total": 5994
+  },
+  "macro_avg": {
+    "precision": 0.8338,
+    "recall": 0.8871,
+    "f1": 0.8578
+  },
+  "weighted_avg": {
+    "precision": 0.8879,
+    "recall": 0.8833,
+    "f1": 0.8844
+  },
+  "per_class": {
+    "Casual": {
+      "accuracy": 0.8943,
+      "precision": 0.9354,
+      "recall": 0.8943,
+      "f1": 0.9144,
+      "support": 615
+    },
+    "Ethnic": {
+      "accuracy": 0.9062,
+      "precision": 0.8657,
+      "recall": 0.9062,
+      "f1": 0.8855,
+      "support": 64
+    },
+    "Formal": {
+      "accuracy": 0.96,
+      "precision": 0.7826,
+      "recall": 0.96,
+      "f1": 0.8623,
+      "support": 75
+    },
+    "Sports": {
+      "accuracy": 0.7877,
+      "precision": 0.7516,
+      "recall": 0.7877,
+      "f1": 0.7692,
+      "support": 146
+    }
+  }
+}

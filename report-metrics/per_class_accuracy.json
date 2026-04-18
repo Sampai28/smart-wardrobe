@@ -1,0 +1,18 @@
+{
+  "Casual": {
+    "per_class_accuracy": 0.8943,
+    "support": 615
+  },
+  "Ethnic": {
+    "per_class_accuracy": 0.9062,
+    "support": 64
+  },
+  "Formal": {
+    "per_class_accuracy": 0.96,
+    "support": 75
+  },
+  "Sports": {
+    "per_class_accuracy": 0.7877,
+    "support": 146
+  }
+}
