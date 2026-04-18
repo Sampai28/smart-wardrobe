@@ -38,5 +38,5 @@ def score_outfits_batch(tops: np.ndarray, bottoms: np.ndarray, shoes: np.ndarray
     sim_tb = row_cosine(tops, bottoms)
     sim_ts = row_cosine(tops, shoes)
     sim_bs = row_cosine(bottoms, shoes)
-    avg = (sim_tb + sim_ts + sim_bs) / 3
+    avg = (sim_tb + sim_ts + sim_bs) / 3 
     return (avg + 1) / 2
